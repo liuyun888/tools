@@ -9,6 +9,7 @@ import com.example.demo.service.ScaleFormatService;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 
@@ -116,6 +117,8 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
         //type = 3 科学计数法的有效数字位数
         else if (requestMap.get("type") == 3) {
 
+
+
         }else {
             //四舍六入五成双 计算
             result = sciCal(Double.parseDouble(value), requestMap.get("digit"));
@@ -142,7 +145,9 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
         int power = digit - (int) d;
 
         BigDecimal bg = doCalculate(value, power);
-        return String.valueOf(bg);
+
+
+        return bg.toPlainString();
 
     }
 

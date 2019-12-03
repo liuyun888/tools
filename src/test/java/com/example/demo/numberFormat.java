@@ -2,6 +2,7 @@ package com.example.demo;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
@@ -40,12 +41,13 @@ public class numberFormat {
 
     /**
      * 四舍六入，五成双
+     *
      * @param value 需要修约的数字
      * @param digit 保留的小数位
      * @return
      */
     @Test
-    public void sciCal(){
+    public void sciCal() {
 
         double value = 9.8259;
 
@@ -58,25 +60,38 @@ public class numberFormat {
             double mod = _num % 1;
             double integer = Math.floor(_num);
             double returnNum;
-            if(mod > 0.5){
-                returnNum=(integer + 1) / ratio;
-            }else if(mod < 0.5){
-                returnNum=integer / ratio;
-            }else{
-                returnNum=(integer % 2 == 0 ? integer : integer + 1) / ratio;
+            if (mod > 0.5) {
+                returnNum = (integer + 1) / ratio;
+            } else if (mod < 0.5) {
+                returnNum = integer / ratio;
+            } else {
+                returnNum = (integer % 2 == 0 ? integer : integer + 1) / ratio;
             }
             BigDecimal bg = new BigDecimal(returnNum);
-            result = bg.setScale((int)digit, BigDecimal.ROUND_HALF_UP).toString();
+            result = bg.setScale((int) digit, BigDecimal.ROUND_HALF_UP).toString();
         } catch (RuntimeException e) {
             throw e;
         }
 
         System.out.println(result);
 
-
-
-
-
     }
 
+    @Test
+    public void scientificNotation2String() {
+
+        Double d = 1259.26;
+        int newValue = 1;
+
+        String value = null;
+        NumberFormat nf = NumberFormat.getInstance();
+        // 设置此格式中不使用分组
+        nf.setGroupingUsed(false);
+        // 设置数的小数部分所允许的最大位数。
+        nf.setMaximumFractionDigits(newValue);
+        value = nf.format(d);
+
+        System.out.println(value);
+
+    }
 }
