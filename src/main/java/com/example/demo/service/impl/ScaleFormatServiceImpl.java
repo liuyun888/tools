@@ -42,20 +42,24 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
 //        RestAssert.fail(!StringUtils.isNoneBlank(value, request), "参数不正确");
 //        RestAssert.fail(!isNumber(value), "value不是有效数字");
 
-        String result = "0";
+        String result;
 
         //解析 request，获取修约规则
         Map<String, Integer> requestMap = initRequest(value, request);
 
-        //四舍六入五成双 计算
-        result = sciCal(Double.parseDouble(value), requestMap.get("digit"));
-
         //根据修约规则，修约
+        result = rounding(value, requestMap);
 
 
         return result;
     }
 
+    /**
+     * 解析 request，获取修约规则
+     * @param value
+     * @param request
+     * @return
+     */
     private Map initRequest(String value, String request) {
 
         JSONObject modeJson = new JSONObject(request);
@@ -80,7 +84,7 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
         for (int i = 0; i < modeJArray.length(); i++) {
 
             String numberRange = modeJArray.getJSONObject(i).getString("numberRange");
-
+            //调用JS，计算String类型的公式
             if (JavaScriptUtil.isMatch(all, numberRange)) {
 
                 digit = modeJArray.getJSONObject(i).getInt("digit");
@@ -89,7 +93,6 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
 
                 break;
             }
-
         }
 
         requestMap.put("type", type);
@@ -97,28 +100,92 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
         return requestMap;
     }
 
+    /**
+     * 根据修约规则，修约
+     * @param value
+     * @param requestMap
+     * @return
+     */
+    private String rounding(String value, Map<String, Integer> requestMap) {
+        String result = "0";
+
+        //type = 2 有效数字位数 todo 魔法值修改
+        if (requestMap.get("type") == 2) {
+            result = roundToSignificantFigures(Double.parseDouble(value), requestMap.get("digit"));
+        }
+        //type = 3 科学计数法的有效数字位数
+        else if (requestMap.get("type") == 3) {
+
+        }else {
+            //四舍六入五成双 计算
+            result = sciCal(Double.parseDouble(value), requestMap.get("digit"));
+
+        }
+
+        return result;
+    }
+
+    /**
+     * 计算有效位数
+     * @param value
+     * @param digit
+     */
+    private String roundToSignificantFigures(Double value, Integer digit) {
+
+        if(value == 0) {
+            return "0";
+        }
+
+        //获取数据位数
+        double d = Math.ceil(Math.log10(value < 0 ? -value: value));
+        //获取截取位数
+        int power = digit - (int) d;
+
+        BigDecimal bg = doCalculate(value, power);
+        return String.valueOf(bg);
+
+    }
+
+    /**
+     * 四舍六入五成双 计算法，同时也是 type = 1 的小数位数计算法
+     * @param value 待计算数字
+     * @param digit 小数位数
+     * @return
+     */
     private String sciCal(Double value, Integer digit) {
 
-        String result = "0";
+        String result;
         try {
-            double ratio = Math.pow(10, digit);
-            double _num = value * ratio;
-            double mod = _num % 1;
-            double integer = Math.floor(_num);
-            double returnNum;
-            if (mod > 0.5) {
-                returnNum = (integer + 1) / ratio;
-            } else if (mod < 0.5) {
-                returnNum = integer / ratio;
-            } else {
-                returnNum = (integer % 2 == 0 ? integer : integer + 1) / ratio;
-            }
-            BigDecimal bg = new BigDecimal(returnNum);
-            result = bg.setScale((int) digit, BigDecimal.ROUND_HALF_UP).toString();
+            BigDecimal bg = doCalculate(value, digit);
+
+            result = bg.setScale(digit, BigDecimal.ROUND_HALF_UP).toString();
         } catch (RuntimeException e) {
             throw e;
         }
 
         return result;
+    }
+
+    private BigDecimal doCalculate(Double value, Integer digit) {
+
+        //步距
+        double ratio = Math.pow(10, digit);
+        //保留部位
+        double num = value * ratio;
+        //四舍六入五成双 部位
+        double mod = num % 1;
+        //保留部位 取整
+        double integer = Math.floor(num);
+        BigDecimal returnNum;
+        //todo 魔法数字修改
+        if (mod > 0.5) {
+            returnNum = (BigDecimal.valueOf(integer).add(BigDecimal.valueOf(1))).divide(BigDecimal.valueOf(ratio)) ;
+        } else if (mod < 0.5) {
+            returnNum = BigDecimal.valueOf(integer).divide(BigDecimal.valueOf(ratio));
+        } else {
+            returnNum = (integer % 2 == 0 ? BigDecimal.valueOf(integer) : BigDecimal.valueOf(integer).add(BigDecimal.valueOf(1))).divide(BigDecimal.valueOf(ratio));
+        }
+
+        return returnNum;
     }
 }
