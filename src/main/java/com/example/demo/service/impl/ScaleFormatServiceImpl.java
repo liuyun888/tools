@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.*;
 
 import com.example.demo.common.JavaScriptUtil;
+import com.example.demo.common.enums.SignificantDigit;
 import com.example.demo.entity.MapJ;
 import com.example.demo.service.ScaleFormatService;
 import org.json.JSONArray;
@@ -46,7 +47,7 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
         String result;
 
         //解析 request，获取修约规则
-        Map<String, Integer> requestMap = initRequest(value, request);
+        Map<String, Integer> requestMap = resolveRequest(value, request);
 
         //根据修约规则，修约
         result = rounding(value, requestMap);
@@ -57,11 +58,12 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
 
     /**
      * 解析 request，获取修约规则
+     *
      * @param value
      * @param request
      * @return
      */
-    private Map initRequest(String value, String request) {
+    private Map resolveRequest(String value, String request) {
 
         JSONObject modeJson = new JSONObject(request);
 //        RestAssert.fail(!modeJson.has("numberRange") || !modeJson.has("type") || !modeJson.has("digit"), "参数不正确");
@@ -103,6 +105,7 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
 
     /**
      * 根据修约规则，修约
+     *
      * @param value
      * @param requestMap
      * @return
@@ -112,47 +115,64 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
 
         //type = 2 有效数字位数 todo 魔法值修改
         if (requestMap.get("type") == 2) {
-            result = roundToSignificantFigures(Double.parseDouble(value), requestMap.get("digit"));
+            result = roundToSignificantDigits(Double.parseDouble(value), requestMap.get("digit"));
         }
         //type = 3 科学计数法的有效数字位数
         else if (requestMap.get("type") == 3) {
 
+            result = scientificNotation(Double.parseDouble(value), requestMap.get("digit"));
 
-
-        }else {
-            //四舍六入五成双 计算
+        }
+        //小数点位数
+        else {
             result = sciCal(Double.parseDouble(value), requestMap.get("digit"));
-
         }
 
         return result;
     }
 
+
     /**
      * 计算有效位数
-     * @param value
-     * @param digit
+     *
+     * @param value 待计算数字
+     * @param digit 小数位数
+     * @return
      */
-    private String roundToSignificantFigures(Double value, Integer digit) {
+    private String roundToSignificantDigits(Double value, Integer digit) {
 
-        if(value == 0) {
+        if (value == 0) {
             return "0";
         }
 
         //获取数据位数
-        double d = Math.ceil(Math.log10(value < 0 ? -value: value));
+        double d = Math.ceil(Math.log10(value < 0 ? -value : value));
         //获取截取位数
         int power = digit - (int) d;
 
         BigDecimal bg = doCalculate(value, power);
 
-
         return bg.toPlainString();
+    }
+
+    /**
+     * 转换为 10的N次方格式
+     *
+     * @param value 待计算数字
+     * @param digit 小数位数
+     * @return
+     */
+    private String scientificNotation(Double value, Integer digit) {
+        //计算后的有效位数
+        String significantDigitStr = roundToSignificantDigits(value, digit);
+        //转换为 10的N次方格式
+        return doChangeFormat(Double.parseDouble(significantDigitStr));
 
     }
 
     /**
-     * 四舍六入五成双 计算法，同时也是 type = 1 的小数位数计算法
+     * type = 1 的小数位数计算法
+     *
      * @param value 待计算数字
      * @param digit 小数位数
      * @return
@@ -184,7 +204,7 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
         BigDecimal returnNum;
         //todo 魔法数字修改
         if (mod > 0.5) {
-            returnNum = (BigDecimal.valueOf(integer).add(BigDecimal.valueOf(1))).divide(BigDecimal.valueOf(ratio)) ;
+            returnNum = (BigDecimal.valueOf(integer).add(BigDecimal.valueOf(1))).divide(BigDecimal.valueOf(ratio));
         } else if (mod < 0.5) {
             returnNum = BigDecimal.valueOf(integer).divide(BigDecimal.valueOf(ratio));
         } else {
@@ -192,5 +212,21 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
         }
 
         return returnNum;
+    }
+
+    private String doChangeFormat(double significantDigitDb) {
+
+        double d = Math.ceil(Math.log10(significantDigitDb < 0 ? -significantDigitDb : significantDigitDb));
+
+        int power = (int) d - 1;
+
+        double ratio = Math.pow(10,power);
+
+        BigDecimal bg = BigDecimal.valueOf(significantDigitDb).divide(BigDecimal.valueOf(ratio));
+
+        String suffix = SignificantDigit.getSuffixByDigit(power);
+
+        return bg + suffix;
+
     }
 }
