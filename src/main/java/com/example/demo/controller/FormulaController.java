@@ -1,5 +1,7 @@
-package com.example.demo.collection;
+package com.example.demo.controller;
 
+import com.example.demo.common.JavaScriptUtil;
+import com.example.demo.common.RegexUtils;
 import com.example.demo.service.ScaleFormatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,6 +38,10 @@ public class FormulaController {
      */
     @GetMapping("/scaleFormat")
     public String scaleFormat(String value, String request){
+
+        if(!RegexUtils.isNumber(value) || !JavaScriptUtil.isJson(request)){
+            return value;
+        }
 
         return scaleFormatService.scaleFormat(value,request);
     }

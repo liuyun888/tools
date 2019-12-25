@@ -8,5 +8,5 @@ package com.example.demo.service;
 
 public interface ScaleFormatService {
 
-    public String scaleFormat(String value, String request);
+    String scaleFormat(String value, String request);
 }

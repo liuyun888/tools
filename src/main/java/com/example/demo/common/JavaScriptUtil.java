@@ -1,6 +1,7 @@
 package com.example.demo.common;
 
 import com.example.demo.entity.MapJ;
+import org.json.JSONObject;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -13,6 +14,7 @@ import java.util.List;
  * @Description
  */
 public class JavaScriptUtil {
+
 
     final static ScriptEngineManager factory = new ScriptEngineManager();
     final static ScriptEngine engine = factory.getEngineByName("JavaScript");
@@ -49,6 +51,12 @@ public class JavaScriptUtil {
         return isMatch;
     }
 
-
-
+    public static boolean isJson(String content) {
+        try {
+            JSONObject jsonObject = new JSONObject(content);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }

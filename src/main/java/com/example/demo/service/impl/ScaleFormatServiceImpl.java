@@ -136,7 +136,7 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
      * 计算有效位数
      *
      * @param value 待计算数字
-     * @param digit 小数位数
+     * @param digit 有效位数
      * @return
      */
     private String roundToSignificantDigits(Double value, Integer digit) {
@@ -149,10 +149,15 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
         double d = Math.ceil(Math.log10(value < 0 ? -value : value));
         //获取截取位数
         int power = digit - (int) d;
+        if(d == 0.0){
+            power = digit - 1;
+        }
 
         BigDecimal bg = doCalculate(value, power);
 
-        return bg.toPlainString();
+        //小数位不足的补0
+//        return bg.toPlainString();
+        return bg.setScale(power, BigDecimal.ROUND_HALF_UP).toString();
     }
 
     /**
@@ -166,7 +171,7 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
         //计算后的有效位数
         String significantDigitStr = roundToSignificantDigits(value, digit);
         //转换为 10的N次方格式
-        return doChangeFormat(Double.parseDouble(significantDigitStr));
+        return doChangeFormat(Double.parseDouble(significantDigitStr), digit);
 
     }
 
@@ -214,7 +219,7 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
         return returnNum;
     }
 
-    private String doChangeFormat(double significantDigitDb) {
+    private String doChangeFormat(double significantDigitDb, Integer digit) {
 
         double d = Math.ceil(Math.log10(significantDigitDb < 0 ? -significantDigitDb : significantDigitDb));
 
@@ -224,9 +229,21 @@ public class ScaleFormatServiceImpl implements ScaleFormatService {
 
         BigDecimal bg = BigDecimal.valueOf(significantDigitDb).divide(BigDecimal.valueOf(ratio));
 
-        String suffix = SignificantDigit.getSuffixByDigit(power);
+        //临界值情况 补0
+        if (bg.equals(BigDecimal.valueOf(10))) {
+            power = (int) d;
+            ratio = Math.pow(10,power);
+            bg = BigDecimal.valueOf(significantDigitDb).divide(BigDecimal.valueOf(ratio));
 
-        return bg + suffix;
+            return  bg.setScale(digit-1, BigDecimal.ROUND_HALF_UP).toString() + SignificantDigit.getSuffixByDigit(power);
+        }
+
+        //进位情况 补0
+        if(significantDigitDb % d == 0){
+            return  bg.setScale(digit-1, BigDecimal.ROUND_HALF_UP).toString() + SignificantDigit.getSuffixByDigit(power);
+        }
+
+        return  bg + SignificantDigit.getSuffixByDigit(power);
 
     }
 }
